@@ -120,44 +120,6 @@ function saveState(){
   catch(e){ console.warn("Falha ao salvar dados", e); }
 }
 
-function exportBackup(){
-  const state = {hcp:HCP, coursePars:COURSE_PARS, rounds};
-  const blob = new Blob([JSON.stringify(state, null, 2)], {type:"application/json"});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `cartao-golfe-backup-${new Date().toISOString().slice(0,10)}.json`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
-}
-
-function importBackup(file){
-  const reader = new FileReader();
-  reader.onload = ()=>{
-    try{
-      const state = JSON.parse(reader.result);
-      if(state.hcp) Object.assign(HCP, state.hcp);
-      if(state.coursePars) Object.assign(COURSE_PARS, state.coursePars);
-      if(Array.isArray(state.rounds)){
-        state.rounds.forEach(r=>{
-          const idx = rounds.findIndex(x=>x.id===r.id);
-          if(idx>=0) rounds[idx] = r; else rounds.push(r);
-        });
-      }
-      saveState();
-      courseFilter = "all"; periodFilter = "all"; selectedCompanions = new Set();
-      activeId = filteredRounds()[0]?.id;
-      renderAll();
-      alert("Backup importado com sucesso.");
-    }catch(e){
-      alert("Não foi possível ler esse arquivo de backup.");
-    }
-  };
-  reader.readAsText(file);
-}
-
 function markClass(diff){
   if(diff<=-3) return {cls:"circle mk-alb", rings:0};
   if(diff===-2) return {cls:"circle mk-eagle", rings:2};
@@ -297,6 +259,8 @@ let courseFilter = "all";
 let periodFilter = "all";
 let selectedCompanions = new Set();
 let activeId = null;
+const OVERVIEW_LIMIT = 10;
+let overviewExpanded = false;
 
 function roundPeriodKey(r){
   const p = parsePeriod(r.date);
@@ -331,6 +295,7 @@ function renderTabs(){
     const list = filteredRounds();
     if(!list.some(r=>r.id===activeId) && list.length>0) activeId = list[0].id;
     selectedCompanions = new Set();
+    overviewExpanded = false;
     renderAll();
   };
 
@@ -343,6 +308,7 @@ function renderTabs(){
     const list = filteredRounds();
     if(!list.some(r=>r.id===activeId) && list.length>0) activeId = list[0].id;
     selectedCompanions = new Set();
+    overviewExpanded = false;
     renderAll();
   };
 }
@@ -438,7 +404,9 @@ function renderOverview(){
     ov.innerHTML = `<div class="ov-row"><div class="ov-left"><div class="ov-sub">Nenhuma rodada encontrada para esse filtro.</div></div></div>`;
     return;
   }
-  ov.innerHTML = list.map(r=>{
+  const hasMore = list.length > OVERVIEW_LIMIT;
+  const visible = (hasMore && !overviewExpanded) ? list.slice(0, OVERVIEW_LIMIT) : list;
+  ov.innerHTML = visible.map(r=>{
     const total = r.scores.reduce((a,b)=>a+b,0);
     const parTotal = r.par.reduce((a,b)=>a+b,0);
     const net = total - (r.hcp ?? HCP["Felipe Zanella"]);
@@ -462,7 +430,10 @@ function renderOverview(){
         </div>
       </div>
     </div>`;
-  }).join("");
+  }).join("") + (hasMore ? `<button type="button" class="ov-toggle ${overviewExpanded?'expanded':''}">
+      ${overviewExpanded ? `Ver menos` : `Ver mais ${list.length - OVERVIEW_LIMIT} rodadas`}
+      <span class="chev">▾</span>
+    </button>` : "");
   ov.querySelectorAll(".ov-row").forEach(row=>{
     row.addEventListener("click", ()=>{
       activeId = row.dataset.id;
@@ -470,6 +441,13 @@ function renderOverview(){
       renderAll();
     });
   });
+  const toggle = ov.querySelector(".ov-toggle");
+  if(toggle){
+    toggle.addEventListener("click", ()=>{
+      overviewExpanded = !overviewExpanded;
+      renderOverview();
+    });
+  }
 }
 
 function renderAll(){
@@ -721,14 +699,6 @@ document.getElementById("addCardBtn").onclick = ()=>{
   renderAddPanel("Preencha os dados da rodada.", emptyExtraction());
 };
 
-document.getElementById("exportBtn").onclick = exportBackup;
-document.getElementById("importBtn").onclick = ()=> document.getElementById("importFileInput").click();
-document.getElementById("importFileInput").onchange = (ev)=>{
-  const file = ev.target.files[0];
-  if(file) importBackup(file);
-  ev.target.value = "";
-};
-
 // ---------- PWA install prompt ----------
 
 let deferredInstallPrompt = null;
@@ -764,7 +734,5 @@ if("serviceWorker" in navigator){
   loadState();
   const list = filteredRounds();
   activeId = list.length ? list[0].id : null;
-  document.getElementById("footnote").textContent =
-    "Nota: as duas rodadas do 20º Aberto (Dia 1 e Dia 2) foram identificadas como o mesmo torneio de 36 buracos registrado tanto em papel quanto pelo aplicativo — os scores buraco a buraco são idênticos entre as versões.";
   renderAll();
 })();
