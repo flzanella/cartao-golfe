@@ -149,7 +149,6 @@ function importBackup(file){
       saveState();
       courseFilter = "all"; periodFilter = "all"; selectedCompanions = new Set();
       activeId = filteredRounds()[0]?.id;
-      updateSubheader();
       renderAll();
       alert("Backup importado com sucesso.");
     }catch(e){
@@ -483,11 +482,6 @@ function renderAll(){
   bindPlayerChips(r);
 }
 
-function updateSubheader(){
-  document.getElementById("subheader").textContent =
-    `${rounds.length} rodadas registradas · ${getCourses().join(" e ")}`;
-}
-
 // ---------- Incluir cartão (entrada manual) ----------
 
 function emptyExtraction(){
@@ -719,7 +713,6 @@ async function saveNewRound(){
   periodFilter = "all";
   selectedCompanions = new Set();
   closeAddPanel();
-  updateSubheader();
   renderAll();
 }
 
@@ -765,7 +758,6 @@ if("serviceWorker" in navigator){
   loadState();
   const list = filteredRounds();
   activeId = list.length ? list[0].id : null;
-  updateSubheader();
   document.getElementById("footnote").textContent =
     "Nota: as duas rodadas do 20º Aberto (Dia 1 e Dia 2) foram identificadas como o mesmo torneio de 36 buracos registrado tanto em papel quanto pelo aplicativo — os scores buraco a buraco são idênticos entre as versões.";
   renderAll();
