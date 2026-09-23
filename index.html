@@ -67,7 +67,7 @@ html{scroll-padding-top:env(safe-area-inset-top,0px);}
 h1{font-size:16.5px; font-weight:700; margin:2px 0 2px; letter-spacing:.2px; line-height:1.25;}
 .sub{font-size:12px; color:var(--ink2); margin:0;}
 .header-actions{display:flex; gap:6px; flex:0 0 auto;}
-.filters-row{display:flex; gap:8px; margin:14px 0 14px;}
+.filters-row{display:flex; gap:8px; flex:1; min-width:200px;}
 .course-select{
   display:block; width:100%; flex:1; min-width:0; margin-bottom:0; padding:13px 30px 13px 13px;
   border-radius:11px; border:none; background-color:var(--pill-bg);
@@ -208,7 +208,8 @@ h1{font-size:16.5px; font-weight:700; margin:2px 0 2px; letter-spacing:.2px; lin
 }
 .ov-toggle .chev{transition:transform .15s ease;}
 .ov-toggle.expanded .chev{transform:rotate(180deg);}
-h2.section{font-size:13px; font-weight:700; margin:18px 0 8px; color:var(--ink);}
+h2.section{font-size:13px; font-weight:700; margin:0; color:var(--ink); white-space:nowrap;}
+.rodadas-header{display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin:18px 0 8px;}
 .header-text{min-width:0;}
 .icon-btn{
   flex:0 0 auto; padding:8px 14px; border-radius:8px; border:none;
@@ -301,17 +302,18 @@ h2.section{font-size:13px; font-weight:700; margin:18px 0 8px; color:var(--ink);
     <button type="button" id="installBtn">Instalar</button>
   </div>
 
-  <div class="filters-row">
-    <select class="course-select" id="courseSelect"></select>
-    <select class="course-select" id="periodSelect"></select>
-  </div>
-
   <div id="addCardPanel" class="add-card-panel" style="display:none;"></div>
 
   <div id="cardArea"></div>
   <div id="comparisonArea"></div>
 
-  <h2 class="section">Todas as rodadas</h2>
+  <div class="rodadas-header">
+    <h2 class="section">Rodadas</h2>
+    <div class="filters-row">
+      <select class="course-select" id="courseSelect"></select>
+      <select class="course-select" id="periodSelect"></select>
+    </div>
+  </div>
   <div class="ov-header-row">
     <div class="ov-header-left"></div>
     <div class="ov-header-right">
