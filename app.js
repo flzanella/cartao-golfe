@@ -790,9 +790,9 @@ function renderAddChoice(){
     <div class="acp-title">Incluir cartão</div>
     <div class="acp-status">Como você quer adicionar essa rodada?</div>
     <div class="acp-choice">
-      <button type="button" class="acp-choice-btn" id="acpChoiceCamera"><span class="acp-choice-icon">📷</span><span>Tirar foto</span></button>
-      <button type="button" class="acp-choice-btn" id="acpChoiceGallery"><span class="acp-choice-icon">🖼️</span><span>Da galeria</span></button>
-      <button type="button" class="acp-choice-btn" id="acpChoiceManual"><span class="acp-choice-icon">✏️</span><span>Manualmente</span></button>
+      <button type="button" class="acp-choice-btn" id="acpChoiceCamera">Tirar foto</button>
+      <button type="button" class="acp-choice-btn" id="acpChoiceGallery">Da galeria</button>
+      <button type="button" class="acp-choice-btn" id="acpChoiceManual">Manualmente</button>
     </div>
     <input type="file" accept="image/*" capture="environment" id="acpChoiceCameraInput" style="display:none">
     <input type="file" accept="image/*" id="acpChoiceGalleryInput" style="display:none">
