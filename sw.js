@@ -1,4 +1,4 @@
-const CACHE_NAME = "golf-scorecard-v1";
+const CACHE_NAME = "golf-scorecard-v2";
 const ASSETS = [
   "./",
   "./index.html",
@@ -8,6 +8,8 @@ const ASSETS = [
   "./icon-512.png",
   "./apple-touch-icon.png",
 ];
+
+const IMAGE_EXTENSIONS = /\.(png|jpg|jpeg|svg|webp)$/;
 
 self.addEventListener("install", (event)=>{
   event.waitUntil(
@@ -25,16 +27,26 @@ self.addEventListener("activate", (event)=>{
 
 self.addEventListener("fetch", (event)=>{
   if(event.request.method !== "GET") return;
+  const url = new URL(event.request.url);
+  if(url.origin !== location.origin) return;
+
+  // Images rarely change: serve from cache first, fall back to network.
+  if(IMAGE_EXTENSIONS.test(url.pathname)){
+    event.respondWith(
+      caches.match(event.request).then(cached=> cached || fetch(event.request))
+    );
+    return;
+  }
+
+  // App shell (HTML/JS/manifest): always prefer the network so updates show
+  // up immediately; fall back to cache only when offline.
   event.respondWith(
-    caches.match(event.request).then(cached=>{
-      const fetchPromise = fetch(event.request).then(networkResp=>{
-        if(networkResp && networkResp.status===200 && networkResp.type==="basic"){
-          const clone = networkResp.clone();
-          caches.open(CACHE_NAME).then(cache=>cache.put(event.request, clone));
-        }
-        return networkResp;
-      }).catch(()=>cached);
-      return cached || fetchPromise;
-    })
+    fetch(event.request).then(networkResp=>{
+      if(networkResp && networkResp.status===200 && networkResp.type==="basic"){
+        const clone = networkResp.clone();
+        caches.open(CACHE_NAME).then(cache=>cache.put(event.request, clone));
+      }
+      return networkResp;
+    }).catch(()=> caches.match(event.request))
   );
 });
