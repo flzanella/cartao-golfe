@@ -782,29 +782,29 @@ async function saveNewRound(){
   }
 }
 
-function renderAddChoice(){
-  const panel = document.getElementById("addCardPanel");
-  panel.style.display = "block";
-  currentExtraction = null;
-  panel.innerHTML = `
-    <div class="acp-title">Incluir cartão</div>
-    <div class="acp-status">Como você quer adicionar essa rodada?</div>
-    <div class="acp-choice">
-      <button type="button" class="acp-choice-btn" id="acpChoiceCamera">Tirar foto</button>
-      <button type="button" class="acp-choice-btn" id="acpChoiceGallery">Da galeria</button>
-      <button type="button" class="acp-choice-btn" id="acpChoiceManual">Manualmente</button>
+function openAddMenu(){
+  const overlay = document.createElement("div");
+  overlay.className = "add-menu-overlay";
+  overlay.innerHTML = `
+    <div class="add-menu">
+      <button type="button" id="addMenuCamera">Tirar foto</button>
+      <button type="button" id="addMenuGallery">Da galeria</button>
+      <button type="button" id="addMenuManual">Manualmente</button>
     </div>
-    <input type="file" accept="image/*" capture="environment" id="acpChoiceCameraInput" style="display:none">
-    <input type="file" accept="image/*" id="acpChoiceGalleryInput" style="display:none">
-    <div class="acp-actions">
-      <button type="button" class="acp-cancel" id="acpChoiceCancelBtn">Cancelar</button>
-    </div>`;
+    <input type="file" accept="image/*" capture="environment" id="addMenuCameraInput" style="display:none">
+    <input type="file" accept="image/*" id="addMenuGalleryInput" style="display:none">`;
+
+  overlay.addEventListener("click", (e)=>{
+    if(e.target === overlay) overlay.remove();
+  });
 
   const startManual = ()=>{
+    overlay.remove();
     currentMatch = matchCourse("");
     renderAddPanel("Preencha os dados da rodada.", emptyExtraction());
   };
   const startWithPhoto = async (file)=>{
+    overlay.remove();
     if(!file){ startManual(); return; }
     currentMatch = matchCourse("");
     const extraction = emptyExtraction();
@@ -816,17 +816,16 @@ function renderAddChoice(){
     renderAddPanel("Confira o campo, a data e preencha os scores.", extraction);
   };
 
-  document.getElementById("acpChoiceCamera").onclick = ()=> document.getElementById("acpChoiceCameraInput").click();
-  document.getElementById("acpChoiceGallery").onclick = ()=> document.getElementById("acpChoiceGalleryInput").click();
-  document.getElementById("acpChoiceManual").onclick = startManual;
-  document.getElementById("acpChoiceCameraInput").onchange = (ev)=> startWithPhoto(ev.target.files[0]);
-  document.getElementById("acpChoiceGalleryInput").onchange = (ev)=> startWithPhoto(ev.target.files[0]);
-  document.getElementById("acpChoiceCancelBtn").onclick = closeAddPanel;
+  overlay.querySelector("#addMenuCamera").onclick = ()=> overlay.querySelector("#addMenuCameraInput").click();
+  overlay.querySelector("#addMenuGallery").onclick = ()=> overlay.querySelector("#addMenuGalleryInput").click();
+  overlay.querySelector("#addMenuManual").onclick = startManual;
+  overlay.querySelector("#addMenuCameraInput").onchange = (ev)=> startWithPhoto(ev.target.files[0]);
+  overlay.querySelector("#addMenuGalleryInput").onchange = (ev)=> startWithPhoto(ev.target.files[0]);
 
-  panel.scrollIntoView({behavior:"smooth", block:"start"});
+  document.body.appendChild(overlay);
 }
 
-document.getElementById("addCardBtn").onclick = renderAddChoice;
+document.getElementById("addCardBtn").onclick = openAddMenu;
 
 // ---------- PWA install prompt ----------
 

@@ -234,11 +234,20 @@ h2.section{font-size:13px; font-weight:700; margin:0; color:var(--ink); white-sp
   margin-top:6px; width:100%; padding:9px; border-radius:8px; border:none;
   background:none; color:var(--birdie); font-size:12.5px; font-weight:700; font-family:inherit; cursor:pointer;
 }
-.acp-choice{display:flex; gap:6px; margin-bottom:6px;}
-.acp-choice-btn{
-  flex:1; padding:10px 4px; border-radius:8px; border:none;
-  background:var(--stat-bg); color:var(--ink); font-family:inherit; font-size:12px; font-weight:700; cursor:pointer;
+.add-menu-overlay{
+  position:fixed; inset:0; background:rgba(0,0,0,0.35); z-index:40;
+  display:flex; align-items:flex-start; justify-content:flex-end;
+  padding:64px 12px 0;
 }
+.add-menu{
+  background:var(--card); border-radius:14px; box-shadow:0 10px 30px rgba(0,0,0,0.25);
+  overflow:hidden; min-width:190px;
+}
+.add-menu button{
+  display:block; width:100%; text-align:left; padding:14px 16px; border:none; background:none;
+  color:var(--ink); font-family:inherit; font-size:14px; font-weight:600; cursor:pointer;
+}
+.add-menu button:active{background:var(--stat-bg);}
 .acp-row{display:flex; flex-direction:column; gap:4px; margin-bottom:10px;}
 .acp-row label{font-size:11px; font-weight:700; color:var(--ink2); text-transform:uppercase; letter-spacing:.3px;}
 .acp-row input, .acp-row select{
