@@ -185,7 +185,7 @@ function renderCard(r){
     <div class="stat"><div class="stat-label">Bogey</div><div class="stat-value">${pct(dist.bogey)}</div></div>
     <div class="stat"><div class="stat-label">Dbl. bogey</div><div class="stat-value">${pct(dist.dbogey)}</div></div>
     <div class="stat"><div class="stat-label">Trp. bogey+</div><div class="stat-value">${pct(dist.triple)}</div></div>
-    <div class="stat stat-wide"><div class="stat-label">Média putts/buraco</div><div class="stat-value">${puttLabel}</div></div>
+    <div class="stat"><div class="stat-label">Putts/buraco</div><div class="stat-value">${puttLabel}</div></div>
   </div>`;
 
   return `
