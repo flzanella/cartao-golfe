@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1b3a24">
+<meta name="description" content="Cartão de pontuação de golfe de Felipe Zanella — histórico de rodadas, comparação com outros jogadores e estatísticas.">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Cartão de Golfe">
+<title>Cartão de Pontuação — Felipe Zanella</title>
+<style>
+:root{
+  --bg:#f4f5f2; --card:#ffffff; --card-border:#e2e4de;
+  --ink:#1c231d; --ink2:#5b6459; --ink3:#8a9184;
+  --green-dark:#1b3a24; --green-mid:#255132; --green-line:rgba(255,255,255,0.22);
+  --par:#1c231d; --par-dim:#8a9184;
+  --bogey:#3266ad; --bogey2:#1e4c8c; --big:#5a3ea8;
+  --birdie:#c23b3b; --eagle:#a11e1e; --alb:#7a0f0f;
+  --pill-bg:#ffffff; --pill-border:#dcded7; --pill-active-bg:#1b3a24; --pill-active-ink:#ffffff;
+  --stat-bg:#f0f2ec;
+  --chip-border:#b9bfb2; --blue-accent:#2f6fd1; --blue-bg:rgba(47,111,209,0.12); --blue-border:#2f6fd1;
+  --font: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  box-sizing:border-box;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#14170f; --card:#1c2318; --card-border:#2c3524;
+    --ink:#eef0e6; --ink2:#b7bcae; --ink3:#7d8474;
+    --green-dark:#0f2417; --green-mid:#173420; --green-line:rgba(255,255,255,0.16);
+    --par:#eef0e6; --par-dim:#7d8474;
+    --bogey:#6fa1e8; --bogey2:#4d84d6; --big:#9d86e8;
+    --birdie:#f28787; --eagle:#ff9e6b; --alb:#ffbb99;
+    --pill-bg:#1c2318; --pill-border:#2c3524; --pill-active-bg:#3f6b4a; --pill-active-ink:#ffffff;
+    --stat-bg:#232b1c;
+    --chip-border:#4a5443; --blue-accent:#7fb2ff; --blue-bg:rgba(127,178,255,0.16); --blue-border:#7fb2ff;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#14170f; --card:#1c2318; --card-border:#2c3524;
+  --ink:#eef0e6; --ink2:#b7bcae; --ink3:#7d8474;
+  --green-dark:#0f2417; --green-mid:#173420; --green-line:rgba(255,255,255,0.16);
+  --par:#eef0e6; --par-dim:#7d8474;
+  --bogey:#6fa1e8; --bogey2:#4d84d6; --big:#9d86e8;
+  --birdie:#f28787; --eagle:#ff9e6b; --alb:#ffbb99;
+  --pill-bg:#1c2318; --pill-border:#2c3524; --pill-active-bg:#3f6b4a; --pill-active-ink:#ffffff;
+  --stat-bg:#232b1c;
+  --chip-border:#4a5443; --blue-accent:#7fb2ff; --blue-bg:rgba(127,178,255,0.16); --blue-border:#7fb2ff;
+}
+*{box-sizing:border-box;}
+html,body{height:100%;}
+body{
+  margin:0; font-family:var(--font); background:var(--bg); color:var(--ink);
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px);}
+.wrap{max-width:640px; margin:0 auto; padding:0 12px 40px;}
+.header-row{
+  display:flex; align-items:flex-start; justify-content:space-between; gap:10px;
+  position:sticky; top:env(safe-area-inset-top,0px); z-index:5; background:var(--bg);
+  padding:12px 12px 10px; margin:0 -12px;
+  border-bottom:1px solid var(--card-border);
+}
+h1{font-size:16.5px; font-weight:700; margin:2px 0 2px; letter-spacing:.2px; line-height:1.25;}
+.sub{font-size:12px; color:var(--ink2); margin:0;}
+.header-actions{display:flex; gap:6px; flex:0 0 auto;}
+.filters-row{display:flex; gap:8px; margin:14px 0 14px;}
+.course-select{
+  display:block; width:100%; flex:1; min-width:0; margin-bottom:0; padding:13px 30px 13px 13px;
+  border-radius:11px; border:1.5px solid var(--pill-border); background-color:var(--pill-bg);
+  color:var(--ink); font-size:13px; font-weight:600; font-family:inherit; min-height:46px;
+  appearance:none; -webkit-appearance:none;
+  text-overflow:ellipsis; white-space:nowrap; overflow:hidden;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%235b6459' stroke-width='2'><path d='M6 8l4 4 4-4'/></svg>");
+  background-repeat:no-repeat; background-position:right 11px center; background-size:14px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]) .course-select{
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%23b7bcae' stroke-width='2'><path d='M6 8l4 4 4-4'/></svg>");
+  }
+}
+:root[data-theme="dark"] .course-select{
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%23b7bcae' stroke-width='2'><path d='M6 8l4 4 4-4'/></svg>");
+}
+.card{
+  border-radius:18px; overflow:hidden; background:linear-gradient(160deg,var(--green-dark),var(--green-mid));
+  color:#fff; padding:18px 18px 16px; margin-bottom:14px;
+}
+.card-top{display:flex; align-items:flex-start; justify-content:space-between; gap:10px;}
+.player{display:flex; align-items:center; gap:10px;}
+.player-name{font-size:14.5px; font-weight:700;}
+.player-hcp{font-size:11px; font-weight:700; color:rgba(255,255,255,0.75); background:rgba(255,255,255,0.14); border-radius:6px; padding:2px 7px;}
+.course-info{text-align:right;}
+.course-name{font-size:13px; font-weight:700;}
+.course-sub{font-size:11px; color:rgba(255,255,255,0.68); margin-top:1px;}
+.score-row{display:flex; align-items:flex-end; justify-content:space-between; margin:14px 0 4px;}
+.score-main{display:flex; flex-direction:column; gap:2px;}
+.score-big{font-size:clamp(42px,13vw,54px); font-weight:800; line-height:1;}
+.score-vs{font-size:13px; font-weight:700; color:rgba(255,255,255,0.72);}
+.score-net{text-align:right;}
+.net-label{font-size:10px; font-weight:700; color:#a9d2ff; letter-spacing:.4px; text-transform:uppercase; margin-bottom:2px;}
+.net-big{font-size:clamp(26px,8vw,34px); font-weight:800; color:#5aa9ff; line-height:1;}
+.net-vs{font-size:12px; font-weight:700; color:#a9d2ff; margin-top:2px;}
+.evt{font-size:12px; color:rgba(255,255,255,0.75); margin-bottom:14px;}
+.ace-badge{
+  display:inline-flex; align-items:center; gap:6px; background:linear-gradient(135deg,#f5d576,#c99a2e);
+  color:#4a3600; font-size:11.5px; font-weight:800; padding:5px 11px; border-radius:999px;
+  margin:-6px 0 12px; letter-spacing:.2px;
+}
+.hole-grid{display:grid; grid-template-columns:repeat(9,1fr) 0.9fr; gap:5px; margin-top:6px;}
+.hole-grid + .hole-grid{margin-top:8px;}
+.hole-cell{display:flex; flex-direction:column; align-items:center; gap:3px;}
+.sum-cell{border-left:1px solid rgba(255,255,255,0.22); padding-left:6px; margin-left:2px;}
+.hole-num{font-size:9px; color:rgba(255,255,255,0.55); font-weight:600;}
+.sum-par{font-size:9px; font-weight:700; color:rgba(255,255,255,0.85); line-height:1.55;}
+.hole-mark{
+  width:100%; aspect-ratio:1/1; max-width:34px; margin:0 auto; display:flex; align-items:center; justify-content:center;
+  font-size:clamp(11px,3.6vw,14px); font-weight:800; position:relative; color:#fff;
+}
+.hole-mark.mk-sum{border:none; font-size:clamp(12px,4vw,16px);}
+.players-box{background:var(--card); border:1px solid var(--card-border); border-radius:14px; padding:12px 14px; margin-bottom:16px;}
+.players-title{font-size:12px; font-weight:700; color:var(--ink2); margin-bottom:10px; text-transform:uppercase; letter-spacing:.3px;}
+.players-list{display:flex; flex-wrap:wrap; gap:8px;}
+.player-chip{display:flex; align-items:center; gap:7px; background:var(--stat-bg); border:1.5px solid var(--chip-border); border-radius:999px; padding:8px 14px 8px 8px; min-height:40px; cursor:pointer; font:inherit;}
+.player-chip.selected{border-color:var(--blue-border); background:var(--blue-bg);}
+.player-chip.selected .chip-name{color:var(--blue-accent);}
+.chip-name{font-size:12.5px; font-weight:600; color:var(--ink);}
+.chip-score{font-size:12px; font-weight:700; color:var(--ink2);}
+.players-empty{font-size:12.5px; color:var(--ink3);}
+.mini-card{background:var(--card); border:1px solid var(--card-border); border-radius:14px; padding:14px 16px; margin-bottom:12px;}
+.mini-header{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px; flex-wrap:wrap;}
+.mini-name-group{display:flex; align-items:center; gap:8px;}
+.mini-name{font-size:13.5px; font-weight:700; color:var(--ink);}
+.mini-hcp{font-size:11px; font-weight:700; color:var(--ink2); background:var(--stat-bg); border-radius:6px; padding:2px 7px;}
+.mini-scores-group{display:flex; align-items:center; gap:10px;}
+.mini-score-block{display:flex; align-items:baseline; gap:6px;}
+.mini-total{font-size:16px; font-weight:800; color:var(--ink);}
+.mini-diff{font-size:11.5px; font-weight:700; padding:2px 7px; border-radius:6px; background:var(--stat-bg); color:var(--ink2);}
+.mini-net-block{display:flex; flex-direction:column; align-items:flex-end; gap:1px; padding-left:8px; border-left:1px solid var(--card-border);}
+.mini-net-label{font-size:10px; font-weight:700; color:#3b7dd8; text-transform:uppercase;}
+.mini-net{font-size:16px; font-weight:800; color:#3b7dd8;}
+.mini-net-diff{font-size:11px; font-weight:700; color:#6b9fdb;}
+.hole-grid.mini{grid-template-columns:repeat(9,1fr) 0.9fr;}
+.hole-grid.mini .hole-mark{max-width:26px; font-size:clamp(10px,3.2vw,12px); color:var(--ink);}
+.hole-grid.mini .hole-mark.mk-sum{font-size:clamp(11px,3.4vw,13px);}
+.hole-grid.mini .mk-big, .hole-grid.mini .mk-alb{color:#fff;}
+.hole-grid.mini .hole-num{color:var(--ink3);}
+.hole-grid.mini .sum-par{color:var(--ink2);}
+.hole-grid.mini .sum-cell{border-left-color:var(--card-border);}
+.hole-mark .ring{position:absolute; inset:0; border-radius:6px;}
+.hole-mark.circle .ring{border-radius:50%;}
+.mk-par{}
+.mk-bogey .ring{border:1.6px solid #ffd479; border-radius:0 !important;}
+.mk-dbogey .ring{border:1.6px solid #ffd479; border-radius:0 !important;}
+.mk-dbogey .ring2{position:absolute; inset:4px; border:1.6px solid #ffd479; border-radius:0 !important;}
+.mk-big{background:#e0703f; border-radius:0;}
+.mk-birdie .ring{border:2.6px solid #ff9c9c; border-radius:50% !important;}
+.mk-eagle .ring{border:1.6px solid #ff9c9c; border-radius:50% !important;}
+.mk-eagle .ring2{position:absolute; inset:4px; border:1.6px solid #ff9c9c; border-radius:50% !important;}
+.mk-alb{background:#ff5a5a; border-radius:50%;}
+.mk-ace{background:radial-gradient(circle at 35% 30%, #ffe9a8, #d4af37); border-radius:50%; box-shadow:0 0 0 1.5px #a9841f inset;}
+.ace-star{font-size:13px; color:#5c4300;}
+.stats-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin-bottom:14px;}
+.stat{background:var(--stat-bg); border-radius:9px; padding:6px 4px; text-align:center;}
+.stat-label{font-size:9px; color:var(--ink2); font-weight:600; margin-bottom:1px; line-height:1.2;}
+.stat-value{font-size:14px; font-weight:800;}
+.note{font-size:11.5px; color:var(--ink3); line-height:1.5; margin:0 0 18px;}
+.overview{border:1px solid var(--card-border); border-radius:14px; overflow:hidden; margin-bottom:8px;}
+.ov-row{display:flex; align-items:center; justify-content:space-between; padding:13px 14px; min-height:52px; border-bottom:1px solid var(--card-border); background:var(--card); cursor:pointer;}
+.ov-row:last-child{border-bottom:none;}
+.ov-row.active{background:var(--stat-bg);}
+.ov-left{display:flex; flex-direction:column;}
+.ov-title{font-size:13px; font-weight:700; color:var(--ink);}
+.ov-sub{font-size:11px; color:var(--ink2); margin-top:1px;}
+.ov-header-row{display:flex; align-items:center; justify-content:space-between; padding:0 14px 6px;}
+.ov-header-left{flex:1;}
+.ov-header-right{display:flex; gap:18px;}
+.ov-header-col{min-width:34px; text-align:right; font-size:10px; font-weight:700; color:var(--ink3); text-transform:uppercase; letter-spacing:.3px;}
+.ov-right{display:flex; align-items:center; gap:18px;}
+.ov-col{display:flex; flex-direction:column; align-items:flex-end; min-width:34px;}
+.ov-score{font-size:17px; font-weight:800; color:var(--ink); font-variant-numeric:tabular-nums; text-align:right;}
+.ov-score.net{color:var(--ink);}
+.ov-col-diff{font-size:10.5px; font-weight:700; margin-top:1px; font-variant-numeric:tabular-nums;}
+.diff-over{color:var(--birdie);}
+.diff-under{color:var(--bogey2);}
+h2.section{font-size:13px; font-weight:700; margin:18px 0 8px; color:var(--ink);}
+.header-text{min-width:0;}
+.icon-btn{
+  flex:0 0 auto; padding:5px 10px; border-radius:7px;
+  border:1px solid var(--chip-border); background:var(--stat-bg); color:var(--ink2);
+  font-size:11px; font-weight:700; font-family:inherit; cursor:pointer; white-space:nowrap;
+}
+.icon-btn:active{background:var(--blue-bg); color:var(--blue-accent);}
+.add-card-panel{
+  background:var(--card); border:1px solid var(--card-border); border-radius:14px;
+  padding:14px; margin-bottom:16px;
+}
+.acp-title{font-size:13px; font-weight:700; margin-bottom:8px;}
+.acp-status{font-size:12.5px; color:var(--ink2); margin-bottom:10px; line-height:1.5;}
+.acp-row{display:flex; flex-direction:column; gap:4px; margin-bottom:10px;}
+.acp-row label{font-size:11px; font-weight:700; color:var(--ink2); text-transform:uppercase; letter-spacing:.3px;}
+.acp-row input, .acp-row select{
+  width:100%; padding:12px 12px; min-height:44px; border-radius:9px; border:1.5px solid var(--chip-border);
+  background:var(--stat-bg); color:var(--ink); font-size:14px; font-family:inherit;
+}
+.acp-two{display:flex; gap:8px;}
+.acp-two .acp-row{flex:1;}
+.acp-holes-title{font-size:11px; font-weight:700; color:var(--ink2); text-transform:uppercase; letter-spacing:.3px; margin:10px 0 6px;}
+.acp-holes-grid{display:grid; grid-template-columns:repeat(9,1fr); gap:4px; margin-bottom:8px;}
+.acp-hole-input{display:flex; flex-direction:column; align-items:center; gap:2px;}
+.acp-hole-input span{font-size:8.5px; color:var(--ink3); font-weight:600;}
+.acp-hole-input input{
+  width:100%; text-align:center; padding:5px 0; border-radius:6px; border:1.5px solid var(--chip-border);
+  background:var(--stat-bg); color:var(--ink); font-size:12px; font-family:inherit;
+}
+.acp-companion{border-top:1px solid var(--card-border); padding-top:10px; margin-top:10px;}
+.acp-companion-head{display:flex; gap:8px; align-items:center; margin-bottom:8px;}
+.acp-companion-head input{flex:1;}
+.acp-remove{
+  flex:0 0 auto; background:none; border:1.5px solid var(--chip-border); border-radius:8px;
+  color:var(--birdie); font-size:12px; font-weight:700; padding:8px 10px; cursor:pointer; font-family:inherit;
+}
+.acp-add-companion{
+  width:100%; padding:9px; border-radius:8px; border:1.5px dashed var(--chip-border);
+  background:none; color:var(--ink2); font-size:12.5px; font-weight:700; cursor:pointer; margin-top:6px; font-family:inherit;
+}
+.acp-actions{display:flex; gap:8px; margin-top:14px;}
+.acp-save, .acp-cancel, .acp-delete{
+  flex:1; padding:13px; min-height:46px; border-radius:10px; font-size:14px; font-weight:700; cursor:pointer; font-family:inherit; border:none;
+}
+.acp-save{background:var(--green-mid); color:#fff;}
+.acp-cancel{background:var(--stat-bg); color:var(--ink2); border:1.5px solid var(--chip-border);}
+.acp-delete{background:none; color:var(--birdie); border:1.5px solid var(--chip-border); flex:0 0 auto;}
+.acp-error{font-size:12px; color:var(--birdie); margin-top:6px;}
+.install-banner{
+  display:none; align-items:center; justify-content:space-between; gap:10px;
+  background:var(--stat-bg); border:1.5px dashed var(--chip-border); border-radius:12px;
+  padding:10px 12px; margin:14px 0; font-size:12.5px; color:var(--ink2);
+}
+.install-banner button{
+  flex:0 0 auto; background:var(--green-mid); color:#fff; border:none; border-radius:8px;
+  padding:9px 14px; font-size:12.5px; font-weight:700; font-family:inherit; cursor:pointer;
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="header-row">
+    <div class="header-text">
+      <h1><i></i>Cartão de pontuação — Felipe Zanella</h1>
+      <p class="sub" id="subheader">Histórico de rodadas registradas</p>
+    </div>
+    <div class="header-actions">
+      <button type="button" class="icon-btn" id="exportBtn" title="Exportar backup">⭳</button>
+      <button type="button" class="icon-btn" id="importBtn" title="Importar backup">⭱</button>
+      <button type="button" class="icon-btn" id="addCardBtn">+ Cartão</button>
+    </div>
+  </div>
+
+  <div class="install-banner" id="installBanner">
+    <span>Instale o app na tela inicial para acesso rápido, mesmo offline.</span>
+    <button type="button" id="installBtn">Instalar</button>
+  </div>
+
+  <div class="filters-row">
+    <select class="course-select" id="courseSelect"></select>
+    <select class="course-select" id="periodSelect"></select>
+  </div>
+
+  <input type="file" id="importFileInput" accept="application/json" style="display:none">
+  <div id="addCardPanel" class="add-card-panel" style="display:none;"></div>
+
+  <div id="cardArea"></div>
+  <div id="comparisonArea"></div>
+
+  <h2 class="section">Todas as rodadas</h2>
+  <div class="ov-header-row">
+    <div class="ov-header-left"></div>
+    <div class="ov-header-right">
+      <div class="ov-header-col">Gross</div>
+      <div class="ov-header-col">Net</div>
+    </div>
+  </div>
+  <div class="overview" id="overview"></div>
+  <p class="note" id="footnote"></p>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
