@@ -523,9 +523,13 @@ function panelHTML(status, extraction, matchState){
     html += `<img src="${extraction.photo}" class="acp-photo-preview" alt="Foto do cartão">
       <button type="button" class="acp-photo-remove" id="acpPhotoRemove">Remover foto</button>`;
   } else {
-    html += `<button type="button" class="acp-photo-btn" id="acpPhotoBtn">📷 Tirar foto ou escolher da galeria</button>`;
+    html += `<div class="acp-photo-row">
+      <button type="button" class="acp-photo-btn" id="acpPhotoCameraBtn">📷 Tirar foto</button>
+      <button type="button" class="acp-photo-btn" id="acpPhotoGalleryBtn">🖼️ Da galeria</button>
+    </div>`;
   }
-  html += `<input type="file" accept="image/*" id="acpPhotoInput" style="display:none"></div>`;
+  html += `<input type="file" accept="image/*" capture="environment" id="acpPhotoCameraInput" style="display:none">
+    <input type="file" accept="image/*" id="acpPhotoGalleryInput" style="display:none"></div>`;
 
   html += `<div class="acp-row"><label>Campo</label>
     <select id="acpCourse">
@@ -611,8 +615,11 @@ function wireAddPanel(){
   const cancelBtn = document.getElementById("acpCancelBtn");
   if(cancelBtn) cancelBtn.onclick = closeAddPanel;
 
-  const photoBtn = document.getElementById("acpPhotoBtn");
-  if(photoBtn) photoBtn.onclick = ()=> document.getElementById("acpPhotoInput").click();
+  const photoCameraBtn = document.getElementById("acpPhotoCameraBtn");
+  if(photoCameraBtn) photoCameraBtn.onclick = ()=> document.getElementById("acpPhotoCameraInput").click();
+
+  const photoGalleryBtn = document.getElementById("acpPhotoGalleryBtn");
+  if(photoGalleryBtn) photoGalleryBtn.onclick = ()=> document.getElementById("acpPhotoGalleryInput").click();
 
   const photoRemove = document.getElementById("acpPhotoRemove");
   if(photoRemove) photoRemove.onclick = ()=>{
@@ -621,9 +628,7 @@ function wireAddPanel(){
     renderAddPanel(null, currentExtraction);
   };
 
-  const photoInput = document.getElementById("acpPhotoInput");
-  if(photoInput) photoInput.onchange = async (ev)=>{
-    const file = ev.target.files[0];
+  const handlePhotoFile = async (file)=>{
     if(!file) return;
     try{
       const dataUrl = await compressImage(file);
@@ -634,6 +639,10 @@ function wireAddPanel(){
       alert("Não foi possível processar essa foto. Tente outra.");
     }
   };
+  const photoCameraInput = document.getElementById("acpPhotoCameraInput");
+  if(photoCameraInput) photoCameraInput.onchange = (ev)=> handlePhotoFile(ev.target.files[0]);
+  const photoGalleryInput = document.getElementById("acpPhotoGalleryInput");
+  if(photoGalleryInput) photoGalleryInput.onchange = (ev)=> handlePhotoFile(ev.target.files[0]);
 
   const courseSel = document.getElementById("acpCourse");
   if(courseSel) courseSel.onchange = ()=>{
@@ -773,10 +782,51 @@ async function saveNewRound(){
   }
 }
 
-document.getElementById("addCardBtn").onclick = ()=>{
-  currentMatch = matchCourse("");
-  renderAddPanel("Preencha os dados da rodada.", emptyExtraction());
-};
+function renderAddChoice(){
+  const panel = document.getElementById("addCardPanel");
+  panel.style.display = "block";
+  currentExtraction = null;
+  panel.innerHTML = `
+    <div class="acp-title">Incluir cartão</div>
+    <div class="acp-status">Como você quer adicionar essa rodada?</div>
+    <div class="acp-choice">
+      <button type="button" class="acp-choice-btn" id="acpChoiceCamera"><span class="acp-choice-icon">📷</span><span>Tirar foto</span></button>
+      <button type="button" class="acp-choice-btn" id="acpChoiceGallery"><span class="acp-choice-icon">🖼️</span><span>Da galeria</span></button>
+      <button type="button" class="acp-choice-btn" id="acpChoiceManual"><span class="acp-choice-icon">✏️</span><span>Manualmente</span></button>
+    </div>
+    <input type="file" accept="image/*" capture="environment" id="acpChoiceCameraInput" style="display:none">
+    <input type="file" accept="image/*" id="acpChoiceGalleryInput" style="display:none">
+    <div class="acp-actions">
+      <button type="button" class="acp-cancel" id="acpChoiceCancelBtn">Cancelar</button>
+    </div>`;
+
+  const startManual = ()=>{
+    currentMatch = matchCourse("");
+    renderAddPanel("Preencha os dados da rodada.", emptyExtraction());
+  };
+  const startWithPhoto = async (file)=>{
+    if(!file){ startManual(); return; }
+    currentMatch = matchCourse("");
+    const extraction = emptyExtraction();
+    try{
+      extraction.photo = await compressImage(file);
+    }catch(e){
+      alert("Não foi possível processar essa foto. Você pode preencher manualmente.");
+    }
+    renderAddPanel("Confira o campo, a data e preencha os scores.", extraction);
+  };
+
+  document.getElementById("acpChoiceCamera").onclick = ()=> document.getElementById("acpChoiceCameraInput").click();
+  document.getElementById("acpChoiceGallery").onclick = ()=> document.getElementById("acpChoiceGalleryInput").click();
+  document.getElementById("acpChoiceManual").onclick = startManual;
+  document.getElementById("acpChoiceCameraInput").onchange = (ev)=> startWithPhoto(ev.target.files[0]);
+  document.getElementById("acpChoiceGalleryInput").onchange = (ev)=> startWithPhoto(ev.target.files[0]);
+  document.getElementById("acpChoiceCancelBtn").onclick = closeAddPanel;
+
+  panel.scrollIntoView({behavior:"smooth", block:"start"});
+}
+
+document.getElementById("addCardBtn").onclick = renderAddChoice;
 
 // ---------- PWA install prompt ----------
 
