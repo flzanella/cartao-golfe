@@ -116,8 +116,13 @@ function saveState(){
     return JSON.stringify(seed) !== JSON.stringify(r);
   });
   const state = {hcp:HCP, coursePars:COURSE_PARS, extraRounds};
-  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
-  catch(e){ console.warn("Falha ao salvar dados", e); }
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    return true;
+  }catch(e){
+    console.warn("Falha ao salvar dados", e);
+    return false;
+  }
 }
 
 function markClass(diff){
@@ -208,6 +213,7 @@ function renderCard(r){
     </div>
     <div class="evt">${r.evento} · Par ${parTotal}</div>
     ${r.scores.includes(1) ? `<div class="ace-badge">★ Hole-in-one — buraco ${r.scores.indexOf(1)+1}</div>` : ""}
+    ${r.photo ? `<button type="button" class="photo-btn" id="cardPhotoBtn">📷 Ver foto do cartão</button>` : ""}
     <div class="hole-grid">
       ${front.map((s,i)=>`<div class="hole-cell"><div class="hole-num">${i+1}</div>${holeMarkHTML(s, frontPar[i])}</div>`).join("")}
       <div class="hole-cell sum-cell">
@@ -448,6 +454,16 @@ function renderOverview(){
   }
 }
 
+function openPhotoViewer(src){
+  const overlay = document.createElement("div");
+  overlay.className = "photo-viewer";
+  overlay.innerHTML = `<img src="${src}" alt="Foto do cartão"><button type="button" class="photo-viewer-close">✕</button>`;
+  overlay.addEventListener("click", (e)=>{
+    if(e.target === overlay || e.target.classList.contains("photo-viewer-close")) overlay.remove();
+  });
+  document.body.appendChild(overlay);
+}
+
 function renderAll(){
   const r = rounds.find(x=>x.id===activeId);
   if(!r){ document.getElementById("cardArea").innerHTML = ""; renderTabs(); renderOverview(); return; }
@@ -456,6 +472,8 @@ function renderAll(){
   renderTabs();
   renderOverview();
   bindPlayerChips(r);
+  const photoBtn = document.getElementById("cardPhotoBtn");
+  if(photoBtn) photoBtn.addEventListener("click", ()=> openPhotoViewer(r.photo));
 }
 
 // ---------- Incluir cartão (entrada manual) ----------
@@ -464,8 +482,34 @@ function emptyExtraction(){
   return {
     campo:"", date:"", evento:"",
     scores: Array(18).fill(""),
-    companions: []
+    companions: [],
+    photo: null
   };
+}
+
+function compressImage(file){
+  return new Promise((resolve, reject)=>{
+    const reader = new FileReader();
+    reader.onerror = ()=> reject(reader.error);
+    reader.onload = ()=>{
+      const img = new Image();
+      img.onerror = ()=> reject(new Error("Não foi possível ler a imagem."));
+      img.onload = ()=>{
+        const maxDim = 1280;
+        let width = img.naturalWidth, height = img.naturalHeight;
+        if(width > maxDim || height > maxDim){
+          if(width > height){ height = Math.round(height * maxDim/width); width = maxDim; }
+          else{ width = Math.round(width * maxDim/height); height = maxDim; }
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = width; canvas.height = height;
+        canvas.getContext("2d").drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL("image/jpeg", 0.72));
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
 }
 
 function panelHTML(status, extraction, matchState){
@@ -473,6 +517,15 @@ function panelHTML(status, extraction, matchState){
   const isNewCourse = matchState.isNew;
   let html = `<div class="acp-title">Incluir cartão</div>`;
   if(status) html += `<div class="acp-status">${status}</div>`;
+
+  html += `<div class="acp-photo">`;
+  if(extraction.photo){
+    html += `<img src="${extraction.photo}" class="acp-photo-preview" alt="Foto do cartão">
+      <button type="button" class="acp-photo-remove" id="acpPhotoRemove">Remover foto</button>`;
+  } else {
+    html += `<button type="button" class="acp-photo-btn" id="acpPhotoBtn">📷 Tirar foto ou escolher da galeria</button>`;
+  }
+  html += `<input type="file" accept="image/*" id="acpPhotoInput" style="display:none"></div>`;
 
   html += `<div class="acp-row"><label>Campo</label>
     <select id="acpCourse">
@@ -557,6 +610,30 @@ function renderAddPanel(status, extraction){
 function wireAddPanel(){
   const cancelBtn = document.getElementById("acpCancelBtn");
   if(cancelBtn) cancelBtn.onclick = closeAddPanel;
+
+  const photoBtn = document.getElementById("acpPhotoBtn");
+  if(photoBtn) photoBtn.onclick = ()=> document.getElementById("acpPhotoInput").click();
+
+  const photoRemove = document.getElementById("acpPhotoRemove");
+  if(photoRemove) photoRemove.onclick = ()=>{
+    syncFormIntoExtraction();
+    currentExtraction.photo = null;
+    renderAddPanel(null, currentExtraction);
+  };
+
+  const photoInput = document.getElementById("acpPhotoInput");
+  if(photoInput) photoInput.onchange = async (ev)=>{
+    const file = ev.target.files[0];
+    if(!file) return;
+    try{
+      const dataUrl = await compressImage(file);
+      syncFormIntoExtraction();
+      currentExtraction.photo = dataUrl;
+      renderAddPanel(null, currentExtraction);
+    }catch(e){
+      alert("Não foi possível processar essa foto. Tente outra.");
+    }
+  };
 
   const courseSel = document.getElementById("acpCourse");
   if(courseSel) courseSel.onchange = ()=>{
@@ -678,11 +755,11 @@ async function saveNewRound(){
   const newRound = {
     id, label: currentExtraction.evento || "Rodada", date: currentExtraction.date,
     campo: campoFinal, local:"", evento: currentExtraction.evento || "Rodada",
-    par, scores, companions
+    par, scores, companions, photo: currentExtraction.photo || null
   };
 
   rounds.push(newRound);
-  saveState();
+  const saved = saveState();
 
   activeId = id;
   courseFilter = "all";
@@ -690,6 +767,10 @@ async function saveNewRound(){
   selectedCompanions = new Set();
   closeAddPanel();
   renderAll();
+
+  if(!saved){
+    alert("A rodada foi adicionada, mas não coube tudo no armazenamento do navegador (provavelmente por causa das fotos). Se isso persistir, remova a foto de rodadas mais antigas.");
+  }
 }
 
 document.getElementById("addCardBtn").onclick = ()=>{
