@@ -1,4 +1,4 @@
-const CACHE_NAME = "golf-scorecard-v2";
+const CACHE_NAME = "golf-scorecard-v3";
 const ASSETS = [
   "./",
   "./index.html",
@@ -38,10 +38,11 @@ self.addEventListener("fetch", (event)=>{
     return;
   }
 
-  // App shell (HTML/JS/manifest): always prefer the network so updates show
-  // up immediately; fall back to cache only when offline.
+  // App shell (HTML/JS/manifest): always revalidate with the server (bypassing
+  // the HTTP cache, not just the service worker cache) so updates show up
+  // immediately; fall back to the SW cache only when offline.
   event.respondWith(
-    fetch(event.request).then(networkResp=>{
+    fetch(event.request, {cache:"no-cache"}).then(networkResp=>{
       if(networkResp && networkResp.status===200 && networkResp.type==="basic"){
         const clone = networkResp.clone();
         caches.open(CACHE_NAME).then(cache=>cache.put(event.request, clone));
