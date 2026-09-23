@@ -171,18 +171,16 @@ function renderCard(r){
     else dist.triple++;
   });
   const pct = n => Math.round(n/18*100) + "%";
+  const puttLabel = puttAvg !== null ? puttAvg.toFixed(2) : "ND";
 
-  let statsHtml = `<div class="stats-grid">`;
-  if(puttAvg !== null){
-    statsHtml += `<div class="stat"><div class="stat-label">Média putts/buraco</div><div class="stat-value">${puttAvg.toFixed(2)}</div></div>`;
-  }
-  statsHtml += `
+  const statsHtml = `<div class="stats-grid">
     <div class="stat"><div class="stat-label">Eagle</div><div class="stat-value">${pct(dist.eagle)}</div></div>
     <div class="stat"><div class="stat-label">Birdie</div><div class="stat-value">${pct(dist.birdie)}</div></div>
     <div class="stat"><div class="stat-label">Par</div><div class="stat-value">${pct(dist.par)}</div></div>
     <div class="stat"><div class="stat-label">Bogey</div><div class="stat-value">${pct(dist.bogey)}</div></div>
     <div class="stat"><div class="stat-label">Dbl. bogey</div><div class="stat-value">${pct(dist.dbogey)}</div></div>
-    <div class="stat"><div class="stat-label">Triplo+</div><div class="stat-value">${pct(dist.triple)}</div></div>
+    <div class="stat"><div class="stat-label">Trp. bogey+</div><div class="stat-value">${pct(dist.triple)}</div></div>
+    <div class="stat stat-wide"><div class="stat-label">Média putts/buraco</div><div class="stat-value">${puttLabel}</div></div>
   </div>`;
 
   return `
