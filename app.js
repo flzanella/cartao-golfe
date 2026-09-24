@@ -211,8 +211,10 @@ function renderCard(r){
         <div class="net-vs">${fmtDiff(net - parTotal)}</div>
       </div>
     </div>
-    <div class="evt">${r.evento} · Par ${parTotal}</div>
-    ${r.scores.includes(1) ? `<div class="ace-badge">★ Hole-in-one — buraco ${r.scores.indexOf(1)+1}</div>` : ""}
+    <div class="evt-row">
+      <div class="evt">${r.evento} · Par ${parTotal}</div>
+      ${r.scores.includes(1) ? `<div class="ace-badge">★ Hole-in-one</div>` : ""}
+    </div>
     ${r.photo ? `<button type="button" class="photo-btn" id="cardPhotoBtn">📷 Ver foto do cartão</button>` : ""}
     <div class="hole-grid">
       ${front.map((s,i)=>`<div class="hole-cell"><div class="hole-num">${i+1}</div>${holeMarkHTML(s, frontPar[i])}</div>`).join("")}
