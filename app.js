@@ -487,6 +487,7 @@ function emptyExtraction(){
   return {
     campo:"", date:"", evento:"", hcp:"",
     scores: Array(18).fill(""),
+    putts: Array(18).fill(""),
     companions: [],
     photo: null
   };
@@ -566,6 +567,15 @@ function panelHTML(status, extraction, matchState){
     <div class="acp-holes-title">Seus scores — buracos 10 a 18</div>
     <div class="acp-holes-grid">
       ${Array.from({length:9}).map((_,i)=>`<div class="acp-hole-input"><span>${i+10}</span><input type="number" class="acp-score" data-i="${i+9}" value="${extraction.scores[i+9]??""}"></div>`).join("")}
+    </div>`;
+
+  html += `<div class="acp-holes-title">Seus putts (opcional) — buracos 1 a 9</div>
+    <div class="acp-holes-grid">
+      ${Array.from({length:9}).map((_,i)=>`<div class="acp-hole-input"><span>${i+1}</span><input type="number" class="acp-putt" data-i="${i}" value="${extraction.putts?.[i]??""}"></div>`).join("")}
+    </div>
+    <div class="acp-holes-title">Seus putts (opcional) — buracos 10 a 18</div>
+    <div class="acp-holes-grid">
+      ${Array.from({length:9}).map((_,i)=>`<div class="acp-hole-input"><span>${i+10}</span><input type="number" class="acp-putt" data-i="${i+9}" value="${extraction.putts?.[i+9]??""}"></div>`).join("")}
     </div>`;
 
   html += `<div id="acpCompanions">`;
@@ -689,6 +699,9 @@ function syncFormIntoExtraction(){
   document.querySelectorAll(".acp-score").forEach(inp=>{
     currentExtraction.scores[parseInt(inp.dataset.i,10)] = inp.value;
   });
+  document.querySelectorAll(".acp-putt").forEach(inp=>{
+    currentExtraction.putts[parseInt(inp.dataset.i,10)] = inp.value;
+  });
   document.querySelectorAll(".acp-companion").forEach(box=>{
     const ci = parseInt(box.dataset.ci,10);
     const name = box.querySelector(".acp-comp-name").value.trim();
@@ -771,11 +784,15 @@ async function saveNewRound(){
 
   const hcpVal = parseInt(currentExtraction.hcp, 10);
 
+  const puttsNums = (currentExtraction.putts||[]).map(v=>parseInt(v,10)).filter(v=>!isNaN(v));
+  const puttsTotal = puttsNums.length===18 ? puttsNums.reduce((a,b)=>a+b,0) : null;
+
   const newRound = {
     id, label: currentExtraction.evento || "Rodada", date: currentExtraction.date,
     campo: campoFinal, local:"", evento: currentExtraction.evento || "Rodada",
     par, scores, companions, photo: currentExtraction.photo || null,
-    ...(Number.isFinite(hcpVal) ? {hcp: hcpVal} : {})
+    ...(Number.isFinite(hcpVal) ? {hcp: hcpVal} : {}),
+    ...(puttsTotal!==null ? {putts: puttsTotal} : {})
   };
 
   rounds.push(newRound);
@@ -798,12 +815,14 @@ async function extractScorecardData(imageDataUrl){
     throw new Error("Leitura automática ainda não configurada.");
   }
   const knownCourses = Object.keys(COURSE_PARS).join(", ");
+  const mainPlayerName = "Felipe Zanella";
+  const knownPlayers = Object.keys(HCP).filter(n=>n!==mainPlayerName).join(", ");
   let resp;
   try{
     resp = await fetch(OCR_ENDPOINT, {
       method: "POST",
       headers: {"content-type": "application/json"},
-      body: JSON.stringify({image: imageDataUrl, knownCourses})
+      body: JSON.stringify({image: imageDataUrl, knownCourses, mainPlayerName, knownPlayers})
     });
   }catch(e){
     throw new Error("Não foi possível contatar o serviço de leitura.");
@@ -826,9 +845,10 @@ async function extractScorecardData(imageDataUrl){
     evento: data.evento || null,
     hcp: data.hcp != null && data.hcp !== "" ? String(data.hcp) : null,
     scores: toScoreArray(data.scores),
+    putts: toScoreArray(data.putts),
     companions: Array.isArray(data.companions) ? data.companions.map(c=>({
       name: c.name || "",
-      hcp: "",
+      hcp: c.hcp != null && c.hcp !== "" ? String(c.hcp) : "",
       scores: toScoreArray(c.scores) || Array(18).fill("")
     })).filter(c=>c.name) : null
   };
@@ -881,6 +901,7 @@ function openAddMenu(){
       if(ocrData.evento) extraction.evento = ocrData.evento;
       if(ocrData.hcp) extraction.hcp = ocrData.hcp;
       if(ocrData.scores) extraction.scores = ocrData.scores;
+      if(ocrData.putts) extraction.putts = ocrData.putts;
       if(ocrData.companions && ocrData.companions.length) extraction.companions = ocrData.companions;
       const gotSomething = ocrData.date || ocrData.hcp || ocrData.scores || ocrData.campo;
       renderAddPanel(
