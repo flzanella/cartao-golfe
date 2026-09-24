@@ -518,6 +518,31 @@ function compressImage(file){
   });
 }
 
+function compressImageForOCR(file){
+  return new Promise((resolve, reject)=>{
+    const reader = new FileReader();
+    reader.onerror = ()=> reject(reader.error);
+    reader.onload = ()=>{
+      const img = new Image();
+      img.onerror = ()=> reject(new Error("Não foi possível ler a imagem."));
+      img.onload = ()=>{
+        const maxDim = 2000;
+        let width = img.naturalWidth, height = img.naturalHeight;
+        if(width > maxDim || height > maxDim){
+          if(width > height){ height = Math.round(height * maxDim/width); width = maxDim; }
+          else{ width = Math.round(width * maxDim/height); height = maxDim; }
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = width; canvas.height = height;
+        canvas.getContext("2d").drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL("image/jpeg", 0.9));
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
 function sumHoles(values, from, count){
   let total = 0, any = false;
   for(let i=from; i<from+count; i++){
@@ -929,7 +954,8 @@ function openAddMenu(){
     }
 
     try{
-      const ocrData = await extractScorecardData(extraction.photo);
+      const ocrImage = await compressImageForOCR(file);
+      const ocrData = await extractScorecardData(ocrImage);
       if(ocrData.campo) currentMatch = matchCourse(ocrData.campo);
       if(ocrData.date) extraction.date = ocrData.date;
       if(ocrData.evento) extraction.evento = ocrData.evento;
