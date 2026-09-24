@@ -518,6 +518,15 @@ function compressImage(file){
   });
 }
 
+function sumHoles(values, from, count){
+  let total = 0, any = false;
+  for(let i=from; i<from+count; i++){
+    const n = parseInt(values?.[i], 10);
+    if(!isNaN(n)){ total += n; any = true; }
+  }
+  return any ? total : "-";
+}
+
 function panelHTML(status, extraction, matchState){
   const courses = Object.keys(COURSE_PARS);
   const isNewCourse = matchState.isNew;
@@ -560,11 +569,11 @@ function panelHTML(status, extraction, matchState){
   </div>
   <div class="acp-row"><label>Evento</label><input type="text" id="acpEvento" value="${extraction.evento||""}"></div>`;
 
-  html += `<div class="acp-holes-title">Seus scores — buracos 1 a 9</div>
+  html += `<div class="acp-holes-title">Seus scores — buracos 1 a 9 <span class="acp-subtotal" id="acpScoreSubOut">Total: ${sumHoles(extraction.scores,0,9)}</span></div>
     <div class="acp-holes-grid">
       ${Array.from({length:9}).map((_,i)=>`<div class="acp-hole-input"><span>${i+1}</span><input type="number" class="acp-score" data-i="${i}" value="${extraction.scores[i]??""}"></div>`).join("")}
     </div>
-    <div class="acp-holes-title">Seus scores — buracos 10 a 18</div>
+    <div class="acp-holes-title">Seus scores — buracos 10 a 18 <span class="acp-subtotal" id="acpScoreSubIn">Total: ${sumHoles(extraction.scores,9,9)}</span></div>
     <div class="acp-holes-grid">
       ${Array.from({length:9}).map((_,i)=>`<div class="acp-hole-input"><span>${i+10}</span><input type="number" class="acp-score" data-i="${i+9}" value="${extraction.scores[i+9]??""}"></div>`).join("")}
     </div>`;
@@ -587,9 +596,11 @@ function panelHTML(status, extraction, matchState){
         <input type="number" class="acp-comp-hcp" placeholder="HCP" value="${known?HCP[c.name]:(c.hcp??"")}" style="width:70px;">
         <button type="button" class="acp-remove" data-remove-companion="${ci}">Remover</button>
       </div>
+      <div class="acp-holes-title">Buracos 1 a 9 <span class="acp-subtotal" data-comp-sub-out="${ci}">Total: ${sumHoles(c.scores,0,9)}</span></div>
       <div class="acp-holes-grid">
         ${Array.from({length:9}).map((_,i)=>`<div class="acp-hole-input"><span>${i+1}</span><input type="number" class="acp-comp-score" data-i="${i}" value="${c.scores?.[i]??""}"></div>`).join("")}
       </div>
+      <div class="acp-holes-title">Buracos 10 a 18 <span class="acp-subtotal" data-comp-sub-in="${ci}">Total: ${sumHoles(c.scores,9,9)}</span></div>
       <div class="acp-holes-grid">
         ${Array.from({length:9}).map((_,i)=>`<div class="acp-hole-input"><span>${i+10}</span><input type="number" class="acp-comp-score" data-i="${i+9}" value="${c.scores?.[i+9]??""}"></div>`).join("")}
       </div>
@@ -686,6 +697,29 @@ function wireAddPanel(){
 
   const saveBtn = document.getElementById("acpSaveBtn");
   if(saveBtn) saveBtn.onclick = saveNewRound;
+
+  const recalcMainSub = ()=>{
+    const vals = Array(18).fill("");
+    document.querySelectorAll(".acp-score").forEach(inp=>{ vals[parseInt(inp.dataset.i,10)] = inp.value; });
+    const outEl = document.getElementById("acpScoreSubOut");
+    const inEl = document.getElementById("acpScoreSubIn");
+    if(outEl) outEl.textContent = `Total: ${sumHoles(vals,0,9)}`;
+    if(inEl) inEl.textContent = `Total: ${sumHoles(vals,9,9)}`;
+  };
+  document.querySelectorAll(".acp-score").forEach(inp=> inp.addEventListener("input", recalcMainSub));
+
+  document.querySelectorAll(".acp-companion").forEach(box=>{
+    const ci = box.dataset.ci;
+    const recalcCompSub = ()=>{
+      const vals = Array(18).fill("");
+      box.querySelectorAll(".acp-comp-score").forEach(inp=>{ vals[parseInt(inp.dataset.i,10)] = inp.value; });
+      const outEl = box.querySelector(`[data-comp-sub-out="${ci}"]`);
+      const inEl = box.querySelector(`[data-comp-sub-in="${ci}"]`);
+      if(outEl) outEl.textContent = `Total: ${sumHoles(vals,0,9)}`;
+      if(inEl) inEl.textContent = `Total: ${sumHoles(vals,9,9)}`;
+    };
+    box.querySelectorAll(".acp-comp-score").forEach(inp=> inp.addEventListener("input", recalcCompSub));
+  });
 }
 
 function syncFormIntoExtraction(){
