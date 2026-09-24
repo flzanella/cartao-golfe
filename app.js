@@ -443,7 +443,7 @@ function renderOverview(){
       activeId = row.dataset.id;
       selectedCompanions = new Set();
       renderAll();
-      window.scrollTo({top:0, behavior:"smooth"});
+      window.scrollTo(0, 0);
     });
   });
   const toggle = ov.querySelector(".ov-toggle");
