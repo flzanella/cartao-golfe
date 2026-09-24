@@ -483,7 +483,7 @@ function renderAll(){
 
 function emptyExtraction(){
   return {
-    campo:"", date:"", evento:"",
+    campo:"", date:"", evento:"", hcp:"",
     scores: Array(18).fill(""),
     companions: [],
     photo: null
@@ -553,8 +553,9 @@ function panelHTML(status, extraction, matchState){
   }
   html += `<div class="acp-two">
     <div class="acp-row"><label>Data</label><input type="text" id="acpDate" placeholder="dd/mm/aaaa" value="${extraction.date||""}"></div>
-    <div class="acp-row"><label>Evento</label><input type="text" id="acpEvento" value="${extraction.evento||""}"></div>
-  </div>`;
+    <div class="acp-row"><label>HCP</label><input type="number" id="acpHcp" placeholder="${HCP["Felipe Zanella"]}" value="${extraction.hcp||""}"></div>
+  </div>
+  <div class="acp-row"><label>Evento</label><input type="text" id="acpEvento" value="${extraction.evento||""}"></div>`;
 
   html += `<div class="acp-holes-title">Seus scores — buracos 1 a 9</div>
     <div class="acp-holes-grid">
@@ -679,8 +680,10 @@ function syncFormIntoExtraction(){
   if(!currentExtraction) return;
   const dateEl = document.getElementById("acpDate");
   const evtEl = document.getElementById("acpEvento");
+  const hcpEl = document.getElementById("acpHcp");
   if(dateEl) currentExtraction.date = dateEl.value.trim();
   if(evtEl) currentExtraction.evento = evtEl.value.trim();
+  if(hcpEl) currentExtraction.hcp = hcpEl.value.trim();
   document.querySelectorAll(".acp-score").forEach(inp=>{
     currentExtraction.scores[parseInt(inp.dataset.i,10)] = inp.value;
   });
@@ -764,10 +767,13 @@ async function saveNewRound(){
     .replace(/[^a-z0-9]+/g,"_").replace(/^_+|_+$/g,"");
   const id = `${slug}_${currentExtraction.date.replace(/\//g,"")}_${Date.now().toString(36)}`;
 
+  const hcpVal = parseInt(currentExtraction.hcp, 10);
+
   const newRound = {
     id, label: currentExtraction.evento || "Rodada", date: currentExtraction.date,
     campo: campoFinal, local:"", evento: currentExtraction.evento || "Rodada",
-    par, scores, companions, photo: currentExtraction.photo || null
+    par, scores, companions, photo: currentExtraction.photo || null,
+    ...(Number.isFinite(hcpVal) ? {hcp: hcpVal} : {})
   };
 
   rounds.push(newRound);
@@ -783,6 +789,74 @@ async function saveNewRound(){
   if(!saved){
     alert("A rodada foi adicionada, mas não coube tudo no armazenamento do navegador (provavelmente por causa das fotos). Se isso persistir, remova a foto de rodadas mais antigas.");
   }
+}
+
+function loadTesseract(){
+  return new Promise((resolve, reject)=>{
+    if(window.Tesseract){ resolve(); return; }
+    const s = document.createElement("script");
+    s.src = "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js";
+    s.onload = resolve;
+    s.onerror = ()=> reject(new Error("Não foi possível carregar o leitor de imagem."));
+    document.head.appendChild(s);
+  });
+}
+
+function orderWordsAsGrid(items){
+  const sorted = [...items].sort((a,b)=>a.y-b.y);
+  const rowThreshold = 25;
+  const rows = [];
+  sorted.forEach(w=>{
+    let row = rows.find(r=> Math.abs(r.y - w.y) < rowThreshold);
+    if(!row){ row = {y:w.y, items:[]}; rows.push(row); }
+    row.items.push(w);
+    row.y = row.items.reduce((s,it)=>s+it.y,0) / row.items.length;
+  });
+  rows.sort((a,b)=>a.y-b.y);
+  const ordered = [];
+  rows.forEach(r=>{
+    r.items.sort((a,b)=>a.x-b.x);
+    ordered.push(...r.items);
+  });
+  return ordered;
+}
+
+async function extractScorecardData(imageDataUrl){
+  await loadTesseract();
+  const result = await Tesseract.recognize(imageDataUrl, "por");
+  const text = result.data.text || "";
+  const words = result.data.words || [];
+
+  const extraction = {date:null, hcp:null, scores:null};
+
+  const dateMatch = text.match(/(\d{1,2})[\/\.\-](\d{1,2})[\/\.\-](\d{2,4})/);
+  if(dateMatch){
+    let [, d, m, y] = dateMatch;
+    d = d.padStart(2,"0"); m = m.padStart(2,"0");
+    if(y.length===2) y = "20"+y;
+    if(parseInt(d,10)<=31 && parseInt(m,10)<=12) extraction.date = `${d}/${m}/${y}`;
+  }
+
+  const hcpMatch = text.match(/HCP\s*[:\-]?\s*(\d{1,2})/i);
+  if(hcpMatch) extraction.hcp = hcpMatch[1];
+
+  const maxY = words.reduce((m,w)=> Math.max(m, w.bbox ? w.bbox.y1 : 0), 0);
+
+  const numberWords = words
+    .map(w=>({ value: parseInt((w.text||"").trim(),10), x:(w.bbox.x0+w.bbox.x1)/2, y:(w.bbox.y0+w.bbox.y1)/2 }))
+    .filter(w=> /^\d{1,2}$/.test(String(w.value)) && w.value>=1 && w.value<=15);
+
+  // The date/HCP header line sits above the score grid on most cards — drop
+  // any stray numbers from that top band if enough candidates remain below it.
+  const belowHeader = numberWords.filter(w=> w.y > maxY*0.2);
+  const pool = belowHeader.length >= 18 ? belowHeader : numberWords;
+
+  const ordered = orderWordsAsGrid(pool);
+  if(ordered.length >= 18){
+    extraction.scores = ordered.slice(0,18).map(w=>String(w.value));
+  }
+
+  return extraction;
 }
 
 function openAddMenu(){
@@ -811,12 +885,35 @@ function openAddMenu(){
     if(!file){ startManual(); return; }
     currentMatch = matchCourse("");
     const extraction = emptyExtraction();
+
+    const panel = document.getElementById("addCardPanel");
+    panel.style.display = "block";
+    panel.innerHTML = `<div class="acp-title">Incluir cartão</div><div class="acp-status">Lendo o cartão da foto…</div>`;
+    panel.scrollIntoView({behavior:"smooth", block:"start"});
+
     try{
       extraction.photo = await compressImage(file);
     }catch(e){
       alert("Não foi possível processar essa foto. Você pode preencher manualmente.");
+      renderAddPanel("Preencha os dados da rodada.", extraction);
+      return;
     }
-    renderAddPanel("Confira o campo, a data e preencha os scores.", extraction);
+
+    try{
+      const ocrData = await extractScorecardData(extraction.photo);
+      if(ocrData.date) extraction.date = ocrData.date;
+      if(ocrData.hcp) extraction.hcp = ocrData.hcp;
+      if(ocrData.scores) extraction.scores = ocrData.scores;
+      const gotSomething = ocrData.date || ocrData.hcp || ocrData.scores;
+      renderAddPanel(
+        gotSomething
+          ? "Confira os dados extraídos da foto — a leitura automática pode errar, revise antes de salvar."
+          : "Não consegui identificar os dados automaticamente. Confira o campo, a data e preencha os scores.",
+        extraction
+      );
+    }catch(e){
+      renderAddPanel("Não consegui ler os dados automaticamente. Confira o campo, a data e preencha os scores.", extraction);
+    }
   };
 
   overlay.querySelector("#addMenuCamera").onclick = ()=> overlay.querySelector("#addMenuCameraInput").click();
