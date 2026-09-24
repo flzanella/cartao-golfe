@@ -183,9 +183,17 @@ h1{font-size:16.5px; font-weight:700; margin:2px 0 2px; letter-spacing:.2px; lin
 .stat-label{font-size:10.5px; color:var(--ink2); font-weight:600; margin-bottom:2px; line-height:1.2;}
 .stat-value{font-size:17px; font-weight:800;}
 .overview{display:flex; flex-direction:column; gap:6px; margin-bottom:8px;}
+.ov-row-wrap{position:relative; border-radius:12px; overflow:hidden;}
+.ov-swipe-delete{
+  position:absolute; top:0; right:0; bottom:0; width:72px;
+  display:flex; align-items:center; justify-content:center;
+  background:#d64545; font-size:20px; border-radius:12px;
+}
 .ov-row{
+  position:relative; z-index:1;
   display:flex; align-items:center; justify-content:space-between; padding:13px 14px; min-height:52px;
   background:var(--card); box-shadow:0 1px 3px rgba(0,0,0,0.06); border-radius:12px; cursor:pointer;
+  touch-action:pan-y; transition:transform .18s ease;
 }
 .ov-row.active{background:var(--stat-bg);}
 .ov-left{display:flex; flex-direction:column;}

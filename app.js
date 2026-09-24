@@ -92,14 +92,21 @@ let rounds = [];
 
 // ---------- Persistence (localStorage) ----------
 
+let deletedSeedIds = new Set();
+
 function loadState(){
   rounds = SEED_ROUNDS.map(r=>({...r}));
+  deletedSeedIds = new Set();
   try{
     const raw = localStorage.getItem(STORAGE_KEY);
     if(raw){
       const state = JSON.parse(raw);
       if(state.hcp) Object.assign(HCP, state.hcp);
       if(state.coursePars) Object.assign(COURSE_PARS, state.coursePars);
+      if(Array.isArray(state.deletedSeedIds)){
+        deletedSeedIds = new Set(state.deletedSeedIds);
+        rounds = rounds.filter(r=>!deletedSeedIds.has(r.id));
+      }
       if(Array.isArray(state.extraRounds)){
         state.extraRounds.forEach(r=>{
           const idx = rounds.findIndex(x=>x.id===r.id);
@@ -117,7 +124,9 @@ function saveState(){
     const seed = SEED_ROUNDS.find(s=>s.id===r.id);
     return JSON.stringify(seed) !== JSON.stringify(r);
   });
-  const state = {hcp:HCP, coursePars:COURSE_PARS, extraRounds};
+  const presentIds = new Set(rounds.map(r=>r.id));
+  SEED_ROUNDS.forEach(s=>{ if(!presentIds.has(s.id)) deletedSeedIds.add(s.id); });
+  const state = {hcp:HCP, coursePars:COURSE_PARS, extraRounds, deletedSeedIds:Array.from(deletedSeedIds)};
   try{
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     return true;
@@ -422,19 +431,22 @@ function renderOverview(){
     const netDiff = net - parTotal;
     const gClass = grossDiff>0? "diff-over":"diff-under";
     const nClass = netDiff>0? "diff-over":"diff-under";
-    return `<div class="ov-row ${r.id===activeId?'active':''}" data-id="${r.id}">
-      <div class="ov-left">
-        <div class="ov-title">${r.campo}</div>
-        <div class="ov-sub">${r.evento} · ${r.date}</div>
-      </div>
-      <div class="ov-right">
-        <div class="ov-col">
-          <div class="ov-score">${total}</div>
-          <div class="ov-col-diff ${gClass}">${fmtDiff(grossDiff)}</div>
+    return `<div class="ov-row-wrap">
+      <div class="ov-swipe-delete" data-delete-id="${r.id}">🗑️</div>
+      <div class="ov-row ${r.id===activeId?'active':''}" data-id="${r.id}">
+        <div class="ov-left">
+          <div class="ov-title">${r.campo}</div>
+          <div class="ov-sub">${r.evento} · ${r.date}</div>
         </div>
-        <div class="ov-col">
-          <div class="ov-score net">${net}</div>
-          <div class="ov-col-diff ${nClass}">${fmtDiff(netDiff)}</div>
+        <div class="ov-right">
+          <div class="ov-col">
+            <div class="ov-score">${total}</div>
+            <div class="ov-col-diff ${gClass}">${fmtDiff(grossDiff)}</div>
+          </div>
+          <div class="ov-col">
+            <div class="ov-score net">${net}</div>
+            <div class="ov-col-diff ${nClass}">${fmtDiff(netDiff)}</div>
+          </div>
         </div>
       </div>
     </div>`;
@@ -442,14 +454,7 @@ function renderOverview(){
       ${overviewExpanded ? `Ver menos` : `Ver mais ${list.length - OVERVIEW_LIMIT} rodadas`}
       <span class="chev">▾</span>
     </button>` : "");
-  ov.querySelectorAll(".ov-row").forEach(row=>{
-    row.addEventListener("click", ()=>{
-      activeId = row.dataset.id;
-      selectedCompanions = new Set();
-      renderAll();
-      window.scrollTo(0, 0);
-    });
-  });
+  wireSwipeToDelete(ov);
   const toggle = ov.querySelector(".ov-toggle");
   if(toggle){
     toggle.addEventListener("click", ()=>{
@@ -457,6 +462,91 @@ function renderOverview(){
       renderOverview();
     });
   }
+}
+
+const SWIPE_OPEN = 72;
+
+function closeAllSwipedRows(except){
+  document.querySelectorAll(".ov-row.swiped").forEach(row=>{
+    if(row !== except){ row.classList.remove("swiped"); row.style.transform = ""; }
+  });
+}
+
+function wireSwipeToDelete(ov){
+  ov.querySelectorAll(".ov-row-wrap").forEach(wrap=>{
+    const row = wrap.querySelector(".ov-row");
+    const delBtn = wrap.querySelector(".ov-swipe-delete");
+    let startX=0, startY=0, dx=0, dragging=false, isSwipe=false;
+
+    row.addEventListener("pointerdown", (e)=>{
+      startX = e.clientX; startY = e.clientY; dx = 0; dragging = true; isSwipe = false;
+    });
+    row.addEventListener("pointermove", (e)=>{
+      if(!dragging) return;
+      const moveX = e.clientX - startX;
+      const moveY = e.clientY - startY;
+      if(!isSwipe && Math.abs(moveX) > 8 && Math.abs(moveX) > Math.abs(moveY)) isSwipe = true;
+      if(!isSwipe) return;
+      const base = row.classList.contains("swiped") ? -SWIPE_OPEN : 0;
+      dx = Math.min(0, Math.max(-SWIPE_OPEN, base + moveX));
+      row.style.transition = "none";
+      row.style.transform = `translateX(${dx}px)`;
+    });
+    const endDrag = ()=>{
+      if(!dragging) return;
+      dragging = false;
+      row.style.transition = "";
+      if(isSwipe){
+        if(dx <= -SWIPE_OPEN/2){
+          closeAllSwipedRows(row);
+          row.classList.add("swiped");
+          row.style.transform = `translateX(-${SWIPE_OPEN}px)`;
+        } else {
+          row.classList.remove("swiped");
+          row.style.transform = "";
+        }
+      }
+    };
+    row.addEventListener("pointerup", endDrag);
+    row.addEventListener("pointercancel", endDrag);
+
+    row.addEventListener("click", (e)=>{
+      if(isSwipe){ isSwipe = false; return; }
+      if(row.classList.contains("swiped")){
+        row.classList.remove("swiped");
+        row.style.transform = "";
+        return;
+      }
+      activeId = row.dataset.id;
+      selectedCompanions = new Set();
+      renderAll();
+      window.scrollTo(0, 0);
+    });
+
+    if(delBtn){
+      delBtn.addEventListener("click", (e)=>{
+        e.stopPropagation();
+        const id = delBtn.dataset.deleteId;
+        const r = rounds.find(x=>x.id===id);
+        const label = r ? `${r.campo} · ${r.date}` : "esta rodada";
+        if(confirm(`Excluir ${label}? Essa ação não pode ser desfeita.`)){
+          deleteRound(id);
+        } else {
+          row.classList.remove("swiped");
+          row.style.transform = "";
+        }
+      });
+    }
+  });
+}
+
+function deleteRound(id){
+  rounds = rounds.filter(r=>r.id!==id);
+  saveState();
+  if(activeId===id){
+    activeId = rounds.length ? rounds[0].id : null;
+  }
+  renderAll();
 }
 
 function openPhotoViewer(src){
