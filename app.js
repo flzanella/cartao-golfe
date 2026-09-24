@@ -1,4 +1,6 @@
 const STORAGE_KEY = "golf-scorecard-v1";
+// URL do Cloudflare Worker que faz a leitura da foto do cartão via IA (ver worker.js).
+const OCR_ENDPOINT = "https://cartao-golfe-ocr.flzanella.workers.dev/";
 
 let HCP = {
   "Felipe Zanella": 18,
@@ -791,72 +793,45 @@ async function saveNewRound(){
   }
 }
 
-function loadTesseract(){
-  return new Promise((resolve, reject)=>{
-    if(window.Tesseract){ resolve(); return; }
-    const s = document.createElement("script");
-    s.src = "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js";
-    s.onload = resolve;
-    s.onerror = ()=> reject(new Error("Não foi possível carregar o leitor de imagem."));
-    document.head.appendChild(s);
-  });
-}
-
-function orderWordsAsGrid(items){
-  const sorted = [...items].sort((a,b)=>a.y-b.y);
-  const rowThreshold = 25;
-  const rows = [];
-  sorted.forEach(w=>{
-    let row = rows.find(r=> Math.abs(r.y - w.y) < rowThreshold);
-    if(!row){ row = {y:w.y, items:[]}; rows.push(row); }
-    row.items.push(w);
-    row.y = row.items.reduce((s,it)=>s+it.y,0) / row.items.length;
-  });
-  rows.sort((a,b)=>a.y-b.y);
-  const ordered = [];
-  rows.forEach(r=>{
-    r.items.sort((a,b)=>a.x-b.x);
-    ordered.push(...r.items);
-  });
-  return ordered;
-}
-
 async function extractScorecardData(imageDataUrl){
-  await loadTesseract();
-  const result = await Tesseract.recognize(imageDataUrl, "por");
-  const text = result.data.text || "";
-  const words = result.data.words || [];
-
-  const extraction = {date:null, hcp:null, scores:null};
-
-  const dateMatch = text.match(/(\d{1,2})[\/\.\-](\d{1,2})[\/\.\-](\d{2,4})/);
-  if(dateMatch){
-    let [, d, m, y] = dateMatch;
-    d = d.padStart(2,"0"); m = m.padStart(2,"0");
-    if(y.length===2) y = "20"+y;
-    if(parseInt(d,10)<=31 && parseInt(m,10)<=12) extraction.date = `${d}/${m}/${y}`;
+  if(!OCR_ENDPOINT){
+    throw new Error("Leitura automática ainda não configurada.");
+  }
+  const knownCourses = Object.keys(COURSE_PARS).join(", ");
+  let resp;
+  try{
+    resp = await fetch(OCR_ENDPOINT, {
+      method: "POST",
+      headers: {"content-type": "application/json"},
+      body: JSON.stringify({image: imageDataUrl, knownCourses})
+    });
+  }catch(e){
+    throw new Error("Não foi possível contatar o serviço de leitura.");
+  }
+  if(!resp.ok){
+    throw new Error("O serviço de leitura retornou um erro.");
+  }
+  const data = await resp.json();
+  if(data.error){
+    throw new Error("O serviço de leitura retornou um erro.");
   }
 
-  const hcpMatch = text.match(/HCP\s*[:\-]?\s*(\d{1,2})/i);
-  if(hcpMatch) extraction.hcp = hcpMatch[1];
+  const toScoreArray = (arr)=> Array.isArray(arr)
+    ? Array.from({length:18}).map((_,i)=> arr[i]!=null ? String(arr[i]) : "")
+    : null;
 
-  const maxY = words.reduce((m,w)=> Math.max(m, w.bbox ? w.bbox.y1 : 0), 0);
-
-  const numberWords = words
-    .map(w=>({ value: parseInt((w.text||"").trim(),10), x:(w.bbox.x0+w.bbox.x1)/2, y:(w.bbox.y0+w.bbox.y1)/2 }))
-    .filter(w=> /^\d{1,2}$/.test(String(w.value)) && w.value>=1 && w.value<=15);
-
-  // The date/HCP header line sits above the score grid on most cards — drop
-  // any stray numbers from that top band if enough candidates remain below it.
-  const belowHeader = numberWords.filter(w=> w.y > maxY*0.2);
-  const pool = belowHeader.length >= 18 ? belowHeader : numberWords;
-
-  const ordered = orderWordsAsGrid(pool);
-  if(ordered.length >= 18){
-    extraction.scores = ordered.slice(0,18).map(w=>String(w.value));
-  }
-
-  return extraction;
+  return {
+    campo: data.campo || null,
+    date: data.date || null,
+    evento: data.evento || null,
+    hcp: data.hcp != null && data.hcp !== "" ? String(data.hcp) : null,
+    scores: toScoreArray(data.scores),
+    companions: Array.isArray(data.companions) ? data.companions.map(c=>({
+      name: c.name || "",
+      hcp: "",
+      scores: toScoreArray(c.scores) || Array(18).fill("")
+    })).filter(c=>c.name) : null
+  };
 }
 
 function openAddMenu(){
@@ -901,10 +876,13 @@ function openAddMenu(){
 
     try{
       const ocrData = await extractScorecardData(extraction.photo);
+      if(ocrData.campo) currentMatch = matchCourse(ocrData.campo);
       if(ocrData.date) extraction.date = ocrData.date;
+      if(ocrData.evento) extraction.evento = ocrData.evento;
       if(ocrData.hcp) extraction.hcp = ocrData.hcp;
       if(ocrData.scores) extraction.scores = ocrData.scores;
-      const gotSomething = ocrData.date || ocrData.hcp || ocrData.scores;
+      if(ocrData.companions && ocrData.companions.length) extraction.companions = ocrData.companions;
+      const gotSomething = ocrData.date || ocrData.hcp || ocrData.scores || ocrData.campo;
       renderAddPanel(
         gotSomething
           ? "Confira os dados extraídos da foto — a leitura automática pode errar, revise antes de salvar."
